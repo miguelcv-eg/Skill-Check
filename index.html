@@ -1,0 +1,231 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Timing Skill Check</title>
+
+  <!-- Google Font -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Lexend:wght@300;500;700&display=swap" rel="stylesheet">
+
+  <link rel="manifest" href="manifest.json">
+
+  <style>
+    body {
+      font-family: "Lexend", sans-serif;
+      background: #0f0f0f;
+      color: white;
+      text-align: center;
+      padding: 20px;
+    }
+
+    h1 { font-weight: 700; }
+
+    .bar {
+      position: relative;
+      width: 90%;
+      max-width: 400px;
+      height: 20px;
+      background: #333;
+      margin: 30px auto;
+      overflow: hidden;
+      border-radius: 10px;
+    }
+
+    .marker {
+      position: absolute;
+      top: 0;
+      width: 4px;
+      height: 100%;
+      background: white;
+    }
+
+    .window {
+      position: absolute;
+      top: 0;
+      height: 100%;
+      background: rgba(0,255,0,0.35);
+    }
+
+    .perfect {
+      position: absolute;
+      top: 0;
+      height: 100%;
+      background: rgba(255,0,0,0.8);
+    }
+
+    button {
+      font-family: "Lexend", sans-serif;
+      padding: 10px 20px;
+      font-size: 16px;
+      margin: 8px;
+    }
+
+    .result {
+      margin-top: 15px;
+      font-size: 22px;
+    }
+
+    .perfect-text {
+      color: #00ff6a;
+      font-weight: 700;
+    }
+
+    .success-text {
+      font-weight: 700;
+    }
+
+    .controls {
+      margin-top: 25px;
+      font-size: 14px;
+    }
+
+    input[type=range] {
+      width: 200px;
+    }
+  </style>
+</head>
+
+<body>
+  <h1>Timing Skill Check</h1>
+
+  <div class="bar" id="bar">
+    <div class="window" id="window"></div>
+    <div class="perfect" id="perfect"></div>
+    <div class="marker" id="marker"></div>
+  </div>
+
+  <button id="hitBtn">HIT</button>
+
+  <div class="result" id="result"></div>
+
+  <div class="controls">
+    <div>
+      Speed:
+      <input type="range" min="0.5" max="3" step="0.1" value="1" id="speed">
+      <span id="speedVal">1</span>x
+    </div>
+
+    <div>
+      Timing Window:
+      <input type="range" min="1" max="50" value="10" id="windowSize">
+      <span id="windowVal">10</span>%
+    </div>
+
+    <div>
+      Perfect % of Window:
+      <input type="range" min="0.1" max="10" step="0.1" value="5" id="perfectSize">
+      <span id="perfectVal">5</span>%
+    </div>
+
+    <div>
+      <label>
+        <input type="checkbox" id="perfectToggle" checked>
+        Enable Perfect
+      </label>
+    </div>
+  </div>
+
+  <!-- Sounds -->
+  <audio id="successSound" src="ULTRAKILL Parry Sound Effect.mp3"></audio>
+  <audio id="perfectSound" src="Black Flash.mp3"></audio>
+
+<script>
+const marker = document.getElementById("marker");
+const bar = document.getElementById("bar");
+const windowEl = document.getElementById("window");
+const perfectEl = document.getElementById("perfect");
+const resultEl = document.getElementById("result");
+
+const speedInput = document.getElementById("speed");
+const windowInput = document.getElementById("windowSize");
+const perfectInput = document.getElementById("perfectSize");
+const perfectToggle = document.getElementById("perfectToggle");
+
+let pos = 0;
+let dir = 1;
+
+function updateLabels() {
+  speedVal.textContent = speedInput.value;
+  windowVal.textContent = windowInput.value;
+  perfectVal.textContent = perfectInput.value;
+}
+
+function updateWindows() {
+  const barWidth = bar.clientWidth;
+  const windowPercent = windowInput.value / 100;
+  const windowWidth = barWidth * windowPercent;
+
+  const start = (barWidth - windowWidth) / 2;
+  windowEl.style.left = start + "px";
+  windowEl.style.width = windowWidth + "px";
+
+  if (perfectToggle.checked) {
+    const perfectPercent = (perfectInput.value / 100);
+    const perfectWidth = windowWidth * perfectPercent;
+    perfectEl.style.display = "block";
+    perfectEl.style.left = (start + windowWidth/2 - perfectWidth/2) + "px";
+    perfectEl.style.width = perfectWidth + "px";
+  } else {
+    perfectEl.style.display = "none";
+  }
+}
+
+function loop() {
+  const barWidth = bar.clientWidth;
+  pos += dir * speedInput.value * 2;
+  if (pos <= 0 || pos >= barWidth) dir *= -1;
+  marker.style.left = pos + "px";
+  requestAnimationFrame(loop);
+}
+
+document.getElementById("hitBtn").onclick = () => {
+  const markerX = pos;
+  const winStart = windowEl.offsetLeft;
+  const winEnd = winStart + windowEl.offsetWidth;
+
+  const perfStart = perfectEl.offsetLeft;
+  const perfEnd = perfStart + perfectEl.offsetWidth;
+
+  resultEl.textContent = "";
+  resultEl.className = "result";
+
+  if (perfectToggle.checked && markerX >= perfStart && markerX <= perfEnd) {
+    resultEl.textContent = "PERFECT!";
+    resultEl.classList.add("perfect-text");
+    perfectSound.volume = 2;
+    perfectSound.currentTime = 0;
+    perfectSound.play();
+  } 
+  else if (markerX >= winStart && markerX <= winEnd) {
+    resultEl.textContent = "SUCCESS";
+    resultEl.classList.add("success-text");
+    successSound.volume = 1;
+    successSound.currentTime = 0;
+    successSound.play();
+  } 
+  else {
+    resultEl.textContent = "FAIL";
+  }
+
+  setTimeout(() => resultEl.textContent = "", 1000);
+};
+
+window.onresize = updateWindows;
+speedInput.oninput = windowInput.oninput = perfectInput.oninput = perfectToggle.onchange = () => {
+  updateLabels();
+  updateWindows();
+};
+
+updateLabels();
+updateWindows();
+loop();
+
+if ("serviceWorker" in navigator) {
+  navigator.serviceWorker.register("./sw.js");
+}
+</script>
+</body>
+</html>
